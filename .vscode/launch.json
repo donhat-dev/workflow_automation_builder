@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Odoo: run (addons + workspace)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "/Users/longnhatdophuong/Documents/18EE-NS/odoo-bin",
+      "cwd": "/Users/longnhatdophuong/Documents/18EE-NS",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "args": [
+        "-c",
+        "/Users/longnhatdophuong/Documents/18EE-NS/odoo.conf",
+        "--addons-path=/Users/longnhatdophuong/Documents/18EE-NS/odoo/addons,${workspaceFolder}",
+        "--dev=xml",
+      ],
+    }
+  ]
+}

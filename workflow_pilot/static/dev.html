@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workflow Pilot - Dev Playground</title>
+
+    <!-- Minimal styles for the dev playground -->
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      #workflow_pilot_dev_root {
+        height: 100%;
+      }
+      .workflow-pilot-dev {
+        height: 100%;
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+      .workflow-pilot-dev__sidebar {
+        border-right: 1px solid #e5e7eb;
+        background: #fafafa;
+        padding: 12px;
+      }
+      .workflow-pilot-dev__main {
+        display: grid;
+        grid-template-rows: 44px 1fr;
+      }
+      .workflow-pilot-dev__topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #ffffff;
+      }
+      .workflow-pilot-dev__title {
+        font-weight: 600;
+      }
+      .workflow-pilot-dev__btn {
+        border: 1px solid #111827;
+        background: #ffffff;
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+
+      .workflow-editor-canvas {
+        position: relative;
+        overflow: hidden;
+        background-image: linear-gradient(#e5e7eb 1px, transparent 1px),
+          linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
+        background-size: 20px 20px;
+      }
+      .workflow-editor-canvas__hint {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        font-size: 13px;
+        color: #6b7280;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 6px 8px;
+        border: 1px dashed #9ca3af;
+      }
+      .workflow-editor-canvas__node {
+        position: absolute;
+        width: 180px;
+        background: #ffffff;
+        border: 1px solid #111827;
+        box-shadow: 2px 2px 0 #111827;
+        padding: 8px;
+      }
+      .workflow-editor-canvas__node-title {
+        font-weight: 700;
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+      .workflow-editor-canvas__node-meta {
+        font-size: 11px;
+        color: #6b7280;
+        margin-top: 4px;
+      }
+
+      .sidebar .sidebar__title {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin: 0 0 10px 0;
+      }
+      .node-palette {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .node-palette__item {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        background: #fff;
+        border: 1px solid #111827;
+        box-shadow: 2px 2px 0 #111827;
+        cursor: pointer;
+        user-select: none;
+      }
+      .node-palette__icon {
+        font-size: 18px;
+      }
+      .node-palette__label {
+        font-weight: 600;
+        font-size: 13px;
+      }
+    </style>
+
+    <!-- IMPORTANT: this page is meant to be served by Odoo, not opened as file:// -->
+    <script>
+      window.__WORKFLOW_PILOT_DEV__ = true;
+    </script>
+
+    <!-- Load Odoo assets (debug bundles). Open with ?debug=assets for best results. -->
+    <link rel="stylesheet" href="/web/assets/debug/web.assets_common.css" />
+    <link rel="stylesheet" href="/web/assets/debug/web.assets_backend.css" />
+  </head>
+  <body>
+    <div id="workflow_pilot_dev_root"></div>
+
+    <script src="/web/assets/debug/web.assets_common.js"></script>
+    <script src="/web/assets/debug/web.assets_backend.js"></script>
+  </body>
+</html>

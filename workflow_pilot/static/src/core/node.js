@@ -1,5 +1,10 @@
 /** @odoo-module **/
 
+/**
+ * @core - Pure JavaScript class, no Odoo dependencies.
+ *         Can be used outside Odoo environment.
+ */
+
 import { DataSocket, ErrorSocket, SocketRegistry } from './socket';
 
 /**

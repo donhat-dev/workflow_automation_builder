@@ -5,12 +5,27 @@
  * 
  * Provides foundation for graph manipulation and layout in Workflow Pilot.
  * Handles cycle detection for loop nodes.
+ * 
+ * @core - This is a pure utility class with dependency injection for dagre.
+ *         Can work outside Odoo if dagre instance is provided.
  */
 
 export class WorkflowGraph {
-    constructor() {
-        // Use dagre as global (loaded via __manifest__.py)
-        this.graph = new dagre.graphlib.Graph();
+    /**
+     * @param {Object} dagreInstance - Optional dagre library instance.
+     *                                 If not provided, falls back to window.dagre
+     *                                 @odoo-dependency - Falls back to window.dagre
+     */
+    constructor(dagreInstance = null) {
+        // @core - Accept injected instance for testability and portability
+        // @odoo-dependency - Falls back to window.dagre if not injected
+        this.dagre = dagreInstance || window.dagre;
+
+        if (!this.dagre) {
+            throw new Error("[WorkflowGraph] Dagre library not loaded. Ensure dagre.js is included in assets.");
+        }
+
+        this.graph = new this.dagre.graphlib.Graph();
         this.graph.setDefaultEdgeLabel(() => ({}));
         this.backEdges = [];
     }
@@ -19,10 +34,11 @@ export class WorkflowGraph {
      * Create WorkflowGraph from nodes and connections arrays
      * @param {Array} nodes - Array of node objects with id, x, y
      * @param {Array} connections - Array of {source, target, sourceHandle, targetHandle}
+     * @param {Object} dagreInstance - Optional dagre library instance
      * @returns {WorkflowGraph}
      */
-    static fromNodes(nodes, connections) {
-        const wg = new WorkflowGraph();
+    static fromNodes(nodes, connections, dagreInstance = null) {
+        const wg = new WorkflowGraph(dagreInstance);
 
         // Set graph options
         wg.graph.setGraph({
@@ -143,7 +159,7 @@ export class WorkflowGraph {
 
         // Run Dagre layout with disableOptimalOrderHeuristic to preserve spawn order
         // (Same as n8n - prevents Dagre from reordering nodes)
-        dagre.layout(this.graph, { disableOptimalOrderHeuristic: true });
+        this.dagre.layout(this.graph, { disableOptimalOrderHeuristic: true });
 
         // Re-add back-edges (for reference, not for layout)
         for (const edge of backEdges) {
@@ -208,7 +224,7 @@ export class WorkflowGraph {
      * @returns {Array<Array<string>>} Array of node ID arrays, one per component
      */
     findComponents() {
-        return dagre.graphlib.alg.components(this.graph);
+        return this.dagre.graphlib.alg.components(this.graph);
     }
 
     /**
@@ -219,7 +235,7 @@ export class WorkflowGraph {
      */
     createSubgraph(nodeIds) {
         const nodeIdSet = new Set(nodeIds);
-        const subgraph = new dagre.graphlib.Graph();
+        const subgraph = new this.dagre.graphlib.Graph();
 
         // Copy graph options
         subgraph.setGraph({ ...this.graph.graph() });
@@ -305,7 +321,7 @@ export class WorkflowGraph {
             }
 
             // Run Dagre layout
-            dagre.layout(subgraph, { disableOptimalOrderHeuristic: true });
+            this.dagre.layout(subgraph, { disableOptimalOrderHeuristic: true });
 
             // Re-add back-edges
             for (const edge of backEdges) {

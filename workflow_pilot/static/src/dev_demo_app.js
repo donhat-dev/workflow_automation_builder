@@ -19,10 +19,12 @@ const STORAGE_KEY = 'workflow_pilot_state';
  */
 export class WorkflowPilotDevApp extends Component {
     static template = xml`
-        <div class="workflow-pilot-dev">
+        <div class="workflow-pilot-dev workflow-pilot-dev--no-sidebar">
+            <!-- Sidebar hidden for now
             <div class="workflow-pilot-dev__sidebar">
                 <NodePalette onAddNode="onAddNode"/>
             </div>
+            -->
 
             <div class="workflow-pilot-dev__main">
                 <div class="workflow-pilot-dev__topbar">
@@ -184,16 +186,8 @@ export class WorkflowPilotDevApp extends Component {
             return;
         }
 
-        // Ensure positions are valid (non-negative)
-        const validX = Math.max(0, x);
-        const validY = Math.max(0, y);
-
-        // Sync with Core layer
-        this.adapter.updatePosition(nodeId, { x: validX, y: validY });
-
-        // Sync with Core layer - reactive state updates automatically
-        this.adapter.updatePosition(nodeId, { x: validX, y: validY });
-        // No need to manually update local UI state arrays, they are references to adapter state
+        // Sync with Core layer - canvas is infinite, allow any position
+        this.adapter.updatePosition(nodeId, { x, y });
     };
 
     onConnectionCreate = ({ source, sourceHandle, target, targetHandle }) => {

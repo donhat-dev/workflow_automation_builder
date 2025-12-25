@@ -24,7 +24,7 @@
 							<div t-else="" class="workflow-node__socket-spacer"/>
 							<!-- Output socket (right side) -->
 							<t t-if="row.output">
-								<WorkflowSocket type="'output'" name="row.output[0]" label="row.output[1].label" nodeId="props.node.id" onMouseDown="props.onSocketMouseDown" onMouseUp="props.onSocketMouseUp"/>
+								<WorkflowSocket type="'output'" name="row.output[0]" label="row.output[1].label" nodeId="props.node.id" isConnected="isOutputConnected(row.output[0])" onMouseDown="props.onSocketMouseDown" onMouseUp="props.onSocketMouseUp" onQuickAdd="props.onSocketQuickAdd"/>
 							</t>
 							<div t-else="" class="workflow-node__socket-spacer"/></div>
 					</t>

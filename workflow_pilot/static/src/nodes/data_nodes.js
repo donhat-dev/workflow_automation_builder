@@ -1,5 +1,6 @@
 /** @odoo-module **/
 
+import { registry } from "@web/core/registry";
 import { BaseNode, DataSocket, ErrorSocket } from '../core/node';
 import { TextInputControl, SelectControl, KeyValueControl } from '../core/control';
 
@@ -11,6 +12,7 @@ export class DataValidationNode extends BaseNode {
     static label = 'Data Validation';
     static icon = 'fa-check-circle';
     static category = 'transform';
+    static description = 'Validate data against rules';
 
     constructor() {
         super();
@@ -50,6 +52,7 @@ export class DataMappingNode extends BaseNode {
     static label = 'Data Mapping';
     static icon = 'fa-exchange';
     static category = 'transform';
+    static description = 'Map and transform data fields';
 
     constructor() {
         super();
@@ -89,3 +92,7 @@ export class DataMappingNode extends BaseNode {
         }));
     }
 }
+
+// Self-register all data nodes to Odoo registry
+registry.category("workflow_node_types").add("validation", DataValidationNode);
+registry.category("workflow_node_types").add("mapping", DataMappingNode);

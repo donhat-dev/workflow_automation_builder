@@ -59,11 +59,13 @@ export class EditorCanvas extends Component {
             selectedConnectionIds: [],
             // Dimension configuration (reactive for runtime updates)
             dimensionConfig: this.props.dimensionConfig || {},
-            // Node Menu state
             nodeMenu: {
                 visible: false,
                 x: 0,
                 y: 0,
+                canvasX: 0,
+                canvasY: 0,
+                variant: 'default', // 'default' or 'large'
                 connectionContext: null,  // { connectionId, position } for inserting node
             },
             // Hovered connection for toolbar
@@ -131,11 +133,36 @@ export class EditorCanvas extends Component {
     }
 
     /**
-     * Get CSS transform style for viewport
+     * Pre-compute set of connected output sockets for O(1) lookup
+     * Format: "nodeId:socketKey"
+     * Used by WorkflowNode to show/hide quick-add buttons
+     */
+    get connectedOutputsSet() {
+        const set = new Set();
+        for (const c of this.connections) {
+            set.add(`${c.source}:${c.sourceHandle}`);
+        }
+        return set;
+    }
+
+    /**
+     * Calculate viewport transform style
+     * ESSENTIAL for pan/zoom - this is not an animation, it's the viewport positioning
      */
     get viewportTransformStyle() {
-        const { zoom, panX, panY } = this.state.viewport;
+        const { panX, panY, zoom } = this.state.viewport;
         return `transform: translate(${panX}px, ${panY}px) scale(${zoom}); transform-origin: 0 0;`;
+    }
+
+    /**
+     * Get style for the parent canvas to sync background pattern with viewport
+     * This ensures the grid stays visible and correctly sized when zooming/panning
+     */
+    get canvasBackgroundStyle() {
+        const { panX, panY, zoom } = this.state.viewport;
+        const size = 20 * zoom;
+        // Background position should stay in sync with panning
+        return `background-size: ${size}px ${size}px; background-position: ${panX}px ${panY}px;`;
     }
 
     /**
@@ -148,7 +175,22 @@ export class EditorCanvas extends Component {
         const { zoom, panX, panY } = this.state.viewport;
         return {
             x: (ev.clientX - rect.left - panX) / zoom,
-            y: (ev.clientY - rect.top - panY) / zoom,
+            y: (ev.clientY - rect.top - panY) / zoom
+        };
+    }
+
+    /**
+     * Convert canvas coordinates to screen coordinates (relative to canvas container)
+     * Useful for positioning fixed-size overlays
+     * @param {number} canvasX 
+     * @param {number} canvasY 
+     * @returns {{ x: number, y: number }}
+     */
+    getScreenPosition(canvasX, canvasY) {
+        const { zoom, panX, panY } = this.state.viewport;
+        return {
+            x: canvasX * zoom + panX,
+            y: canvasY * zoom + panY
         };
     }
 
@@ -211,6 +253,11 @@ export class EditorCanvas extends Component {
      * @param {WheelEvent} ev
      */
     onWheel(ev) {
+        // If mouse is over NodeMenu or other fixed overlays, allow normal scrolling and skip zoom
+        if (ev.target.closest('.node-menu') || ev.target.closest('.connection-toolbar')) {
+            return;
+        }
+
         ev.preventDefault();
 
         if (this._scrollFrame) return;
@@ -536,23 +583,20 @@ export class EditorCanvas extends Component {
             );
 
             // Calculate deltas
-            const deltaX = Math.abs(sourcePos.x - targetPos.x);
+            const deltaX = sourcePos.x - targetPos.x;
             const deltaY = targetPos.y - sourcePos.y;
 
             // Detect vertical stack using ratio-based approach
             // S-curve ONLY when: 
             // 1. Target is to the LEFT of source (backward connection)
             // 2. Target is significantly below source
-            // 3. Vertical distance >> horizontal distance
-            // When targetX >= sourceX, always use Bezier for space optimization
             const isVerticalStack =
-                targetPos.x < sourcePos.x &&                          // Target is LEFT of source
-                deltaY > EDGE_DETECTION.MIN_DELTA_Y &&               // Minimum vertical distance
-                deltaY > deltaX * EDGE_DETECTION.VERTICAL_RATIO;     // Steepness ratio
+                deltaY > EDGE_DETECTION.MIN_DELTA_Y &&
+                deltaX > 0;
 
             // Detect back-edge (source right of target) - excludes vertical stack
             const isBackEdge =
-                sourcePos.x - EDGE_DETECTION.HANDLE_SIZE > targetPos.x &&
+                sourcePos.x > targetPos.x &&
                 !isVerticalStack;
 
             // Use S-curve bracket routing for vertically stacked nodes
@@ -624,14 +668,12 @@ export class EditorCanvas extends Component {
         event.stopPropagation();
         event.preventDefault();
 
-        const rect = this.rootRef.el.getBoundingClientRect();
+        // Use canvas coordinates (accounts for zoom/pan)
+        const canvasPos = this.getCanvasPosition(event);
 
         this.state.isConnecting = true;
         this.state.connectionStart = { nodeId, socketKey, socketType };
-        this.state.tempLineEndpoint = {
-            x: event.clientX - rect.left,
-            y: event.clientY - rect.top,
-        };
+        this.state.tempLineEndpoint = canvasPos;
     };
 
     /**
@@ -813,8 +855,8 @@ export class EditorCanvas extends Component {
 
         // Use canvas position (accounts for zoom/pan)
         const position = this.getCanvasPosition(ev);
-        position.x = Math.max(0, Math.round(position.x));
-        position.y = Math.max(0, Math.round(position.y));
+        position.x = Math.round(position.x);
+        position.y = Math.round(position.y);
 
         this.props.onDropNode({ type, position });
     }
@@ -961,8 +1003,8 @@ export class EditorCanvas extends Component {
                 if (node) {
                     this.props.onNodePositionChange?.({
                         nodeId,
-                        x: Math.max(0, (node.x || 0) + dx),
-                        y: Math.max(0, (node.y || 0) + dy),
+                        x: (node.x || 0) + dx,
+                        y: (node.y || 0) + dy,
                     });
                 }
             });
@@ -1120,6 +1162,11 @@ export class EditorCanvas extends Component {
      * @param {MouseEvent} ev
      */
     onCanvasMouseDown(ev) {
+        // Ignore clicks inside UI overlays (NodeMenu, Toolbar, etc.)
+        if (ev.target.closest('.node-menu') || ev.target.closest('.connection-toolbar') || ev.target.closest('.workflow-editor-canvas__controls')) {
+            return;
+        }
+
         // Middle mouse = pan
         if (ev.button === 1) {
             ev.preventDefault();
@@ -1166,11 +1213,16 @@ export class EditorCanvas extends Component {
      */
     onCanvasContextMenu(ev) {
         ev.preventDefault();
-        const pos = this.getCanvasPosition(ev);
+        const rect = this.rootRef.el.getBoundingClientRect();
+        const canvasPos = this.getCanvasPosition(ev);
+
         this.state.nodeMenu = {
             visible: true,
-            x: pos.x,
-            y: pos.y,
+            x: ev.clientX - rect.left,
+            y: ev.clientY - rect.top,
+            canvasX: canvasPos.x,
+            canvasY: canvasPos.y,
+            variant: 'default',
             connectionContext: null,
         };
     }
@@ -1179,21 +1231,42 @@ export class EditorCanvas extends Component {
      * Handle NodeMenu selection
      */
     onNodeMenuSelect(nodeType, connectionContext) {
-        let { x, y } = this.state.nodeMenu;
+        let { canvasX, canvasY } = this.state.nodeMenu;
         const dims = this.dimensions;
-        x -= dims.nodeWidth / 2;
 
-        if (connectionContext) {
-            let { connectionId, position } = connectionContext;
-            position = {
-                x: x - dims.nodeWidth / 2,
-                y: y
-            };
+        // Final position for node placement
+        let position = {
+            x: canvasX - dims.nodeWidth / 2,
+            y: canvasY
+        };
+
+        if (connectionContext?.type === 'quickAdd') {
+            // Quick-add from socket: create node and auto-connect
+            const { sourceNodeId, sourceSocketKey } = connectionContext;
+            const newNodeId = this.props.onDropNode({ type: nodeType, position });
+
+            if (newNodeId) {
+                // Use setTimeout to ensure node is in state
+                setTimeout(() => {
+                    const newNode = this.nodes.find(n => n.id === newNodeId);
+                    const firstInputKey = Object.keys(newNode?.inputs || {})[0];
+
+                    if (firstInputKey) {
+                        this.props.onConnectionCreate({
+                            source: sourceNodeId,
+                            sourceHandle: sourceSocketKey,
+                            target: newNodeId,
+                            targetHandle: firstInputKey,
+                        });
+                    }
+                }, 0);
+            }
+        } else if (connectionContext?.connectionId) {
             // Inserting node into existing connection
-            this._insertNodeIntoConnection(nodeType, { connectionId, position });
+            this._insertNodeIntoConnection(nodeType, { connectionId: connectionContext.connectionId, position });
         } else {
             // Adding new node at position
-            this.props.onDropNode({ type: nodeType, position: { x, y } });
+            this.props.onDropNode({ type: nodeType, position });
         }
     }
 
@@ -1205,12 +1278,41 @@ export class EditorCanvas extends Component {
             visible: false,
             x: 0,
             y: 0,
+            canvasX: 0,
+            canvasY: 0,
+            variant: 'default',
             connectionContext: null,
         };
     }
 
     /**
-     * Handle connection hover - show toolbar
+     * Handle connection mouseenter - calculates midpoint only on actual event
+     * (Performance optimization: avoids calculating midpoint on every render)
+     * @param {MouseEvent} ev
+     * @param {Object} conn - Connection object from renderedConnections
+     */
+    handleConnectionEnter(ev, conn) {
+        // Clear any pending leave timeout
+        if (this._connectionHoverTimeout) {
+            clearTimeout(this._connectionHoverTimeout);
+            this._connectionHoverTimeout = null;
+        }
+
+        // Only update if connection changed (debounce rapid hovers)
+        if (this.state.hoveredConnection.id === conn.id) return;
+
+        const midpoint = this.getConnectionMidpoint(conn);
+        const screenPos = this.getScreenPosition(midpoint.x, midpoint.y);
+
+        this.state.hoveredConnection = {
+            id: conn.id,
+            midpoint: screenPos,      // Screen coords for fixed toolbar placement
+            canvasMidpoint: midpoint, // Original coords for node placement
+        };
+    }
+
+    /**
+     * Handle connection hover - show toolbar (legacy, kept for compatibility)
      */
     onConnectionMouseEnter(connectionId, midpoint) {
         this.state.hoveredConnection = {
@@ -1251,11 +1353,18 @@ export class EditorCanvas extends Component {
      * Handle "Add Node" from connection toolbar
      */
     onConnectionAddNode(connectionId, position) {
+        // position here is the screen-relative midpoint from state.hoveredConnection.midpoint
+        // We use the stored canvasMidpoint for the actual node placement
+        const canvasPos = this.state.hoveredConnection.canvasMidpoint;
+
         this.state.nodeMenu = {
             visible: true,
             x: position.x,
             y: position.y,
-            connectionContext: { connectionId, position },
+            canvasX: canvasPos.x,
+            canvasY: canvasPos.y,
+            variant: 'default',
+            connectionContext: { connectionId, position: canvasPos },
         };
     }
 
@@ -1263,14 +1372,21 @@ export class EditorCanvas extends Component {
      * Insert a new node into an existing connection
      * 
      * Logic: When inserting C into A→B connection:
-     * 1. Remove old connection A→B
-     * 2. Create new connection A→C (source's output → new node's input)
-     * 3. User manually connects C→B if needed (more flexible)
+     * 1. Create new node C at position
+     * 2. Remove old connection A→B
+     * 3. Create new connection A→C (source's output → new node's first input)
+     * 4. Create new connection C→B (new node's first output → original target's input)
      */
     _insertNodeIntoConnection(nodeType, context) {
         const { connectionId, position } = context;
         const conn = this.connections.find(c => c.id === connectionId);
         if (!conn) return;
+
+        // Remember original connection details before removing
+        const originalSource = conn.source;
+        const originalSourceHandle = conn.sourceHandle;
+        const originalTarget = conn.target;
+        const originalTargetHandle = conn.targetHandle;
 
         // 1. Create new node at position
         const newNodeId = this.props.onDropNode({ type: nodeType, position });
@@ -1279,24 +1395,43 @@ export class EditorCanvas extends Component {
         // 2. Remove old connection A→B
         this.props.removeConnection(connectionId);
 
-        // 3. Create connection from old source to new node (A→C)
-        // Uses the original source's output socket and new node's first input
-        this.props.onConnectionCreate({
-            source: conn.source,
-            sourceHandle: conn.sourceHandle,
-            target: newNodeId,
-            targetHandle: conn.targetHandle,
-        });
+        // 3. Use setTimeout to ensure the new node is available in state
+        // This handles the async nature of reactive state updates
+        setTimeout(() => {
+            const newNode = this.nodes.find(n => n.id === newNodeId);
+            if (!newNode) {
+                console.warn('[EditorCanvas] New node not found after insert:', newNodeId);
+                return;
+            }
 
-        const sourceHandle = Object.keys(this.nodes.find(n => n.id === newNodeId).outputs)?.[0];
+            // Get first input socket of new node (for incoming connection)
+            const newNodeInputKey = Object.keys(newNode.inputs || {})[0];
+            // Get first output socket of new node (for outgoing connection)
+            const newNodeOutputKey = Object.keys(newNode.outputs || {})[0];
 
-        sourceHandle ? this.props.onConnectionCreate({
-            source: newNodeId,
-            sourceHandle,
-            target: conn.target,
-            targetHandle: conn.targetHandle,
-        }) : null;
+            if (!newNodeInputKey) {
+                console.warn('[EditorCanvas] New node has no input sockets');
+                return;
+            }
 
+            // 3. Create connection from old source to new node (A→C)
+            this.props.onConnectionCreate({
+                source: originalSource,
+                sourceHandle: originalSourceHandle,
+                target: newNodeId,
+                targetHandle: newNodeInputKey,
+            });
+
+            // 4. Create connection from new node to original target (C→B)
+            if (newNodeOutputKey) {
+                this.props.onConnectionCreate({
+                    source: newNodeId,
+                    sourceHandle: newNodeOutputKey,
+                    target: originalTarget,
+                    targetHandle: originalTargetHandle,
+                });
+            }
+        }, 0);
     }
 
     /**
@@ -1326,6 +1461,63 @@ export class EditorCanvas extends Component {
             midpoint: { x: 0, y: 0 },
         };
     }
+
+    /**
+     * Handle "+ Node" button click from toolbar
+     */
+    onAddNodeClick(ev) {
+        const rect = this.rootRef.el.getBoundingClientRect();
+        const btnRect = ev.currentTarget.getBoundingClientRect();
+
+        // Position below the button (dropdown style)
+        const x = btnRect.left - rect.left;
+        const y = btnRect.bottom - rect.top + 8; // 8px gap
+
+        // Center of viewport for the node itself to be dropped
+        const canvasPos = this.getCanvasPosition({
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2
+        });
+
+        this.state.nodeMenu = {
+            visible: true,
+            x,
+            y,
+            canvasX: canvasPos.x,
+            canvasY: canvasPos.y,
+            variant: 'large',
+            connectionContext: null,
+        };
+    }
+
+    /**
+     * Handle quick-add button click on unconnected output sockets
+     * Opens NodeMenu and auto-connects new node to clicked socket
+     */
+    onSocketQuickAdd = ({ nodeId, socketKey, event }) => {
+        const node = this.nodes.find(n => n.id === nodeId);
+        if (!node) return;
+
+        // Get socket position for menu placement
+        const socketPos = this.getSocketPositionForNode(node, socketKey, 'output');
+        const screenPos = this.getScreenPosition(socketPos.x, socketPos.y);
+        const rect = this.rootRef.el.getBoundingClientRect();
+
+        this.state.nodeMenu = {
+            visible: true,
+            x: screenPos.x + 30,  // Offset from socket
+            y: screenPos.y - 100, // Position above socket
+            canvasX: socketPos.x + 150,  // Where new node will be placed (right of socket)
+            canvasY: socketPos.y - 20,   // Slightly above
+            variant: 'default',
+            // Context for auto-connection
+            connectionContext: {
+                type: 'quickAdd',
+                sourceNodeId: nodeId,
+                sourceSocketKey: socketKey,
+            },
+        };
+    };
 }
 
 

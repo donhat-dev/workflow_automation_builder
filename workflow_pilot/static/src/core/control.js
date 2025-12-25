@@ -1,6 +1,11 @@
 /** @odoo-module **/
 
 /**
+ * @core - Pure JavaScript class, no Odoo dependencies.
+ *         Can be used outside Odoo environment.
+ */
+
+/**
  * Control - Base class for node configuration UI elements
  * Inspired by Rete.js ClassicPreset.Control
  * 

@@ -15,6 +15,11 @@
   color: #e0e0e0;
 }
 
+/* No sidebar variant - full width canvas */
+.workflow-pilot-dev--no-sidebar {
+  grid-template-columns: 1fr;
+}
+
 /* Sidebar (Node Palette) */
 .workflow-pilot-dev__sidebar {
   border-right: 1px solid #2a2d33;
@@ -60,7 +65,7 @@
   border-radius: 6px;
   font-weight: 500;
   font-size: 0.85rem;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); DISABLED */
 }
 
 .workflow-pilot-dev__btn:hover {
@@ -100,14 +105,14 @@
   border-radius: 6px;
   cursor: pointer;
   user-select: none;
-  transition: all 0.2s ease;
+  /* transition: all 0.2s ease; DISABLED */
   color: #d1d5db;
 }
 
 .node-palette__item:hover {
   border-color: #4b5563;
   background: #25282e;
-  transform: translateX(2px);
+  /* transform: translateX(2px); DISABLED */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 

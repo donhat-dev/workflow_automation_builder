@@ -1,6 +1,11 @@
 /** @odoo-module **/
 
 /**
+ * @core - Pure JavaScript class, no Odoo dependencies.
+ *         Can be used outside Odoo environment.
+ */
+
+/**
  * Connection - Represents a link between two nodes
  * 
  * Connections are directional: source (output) -> target (input)

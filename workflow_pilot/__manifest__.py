@@ -11,11 +11,31 @@
         'data/workflow_pilot_menu.xml',
     ],
     'assets': {
-              'web.assets_backend': [
-                  'workflow_pilot/static/lib/dagre.js/dagre.min.js',
-                  'workflow_pilot/static/src/**/*'
-              ],
-          },
+        # Core libs bundle - can be lazy-loaded or included separately
+        'workflow_pilot.assets_libs': [
+            'workflow_pilot/static/lib/dagre.js/dagre.min.js',
+            'workflow_pilot/static/lib/motion/**/*',
+        ],
+        'web.assets_backend': [
+            # Include libs bundle first
+            ('include', 'workflow_pilot.assets_libs'),
+            # Registries (define categories and lib refs)
+            'workflow_pilot/static/src/registries/**/*',
+            # Services (depend on registries)
+            'workflow_pilot/static/src/services/**/*',
+            # Core classes (pure JS, minimal deps)
+            'workflow_pilot/static/src/core/**/*',
+            # Node definitions (register to node registry)
+            'workflow_pilot/static/src/nodes/**/*',
+            # Utilities
+            'workflow_pilot/static/src/utils/**/*',
+            # Components (use services)
+            'workflow_pilot/static/src/components/**/*',
+            # Entry points and styles
+            'workflow_pilot/static/src/*.js',
+            'workflow_pilot/static/src/*.css',
+        ],
+    },
     'application': True,
     'installable': True, 
     'auto_install': False,

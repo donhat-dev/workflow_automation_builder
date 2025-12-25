@@ -1,49 +1,47 @@
 /** @odoo-module **/
 
 /**
- * Node Registry - Central registry of all available node types
+ * Node Index - Re-exports and backward compatibility
  * 
- * Used by WorkflowEditor for deserialization and by NodePalette for display.
+ * This file provides:
+ * 1. Re-exports of all node classes for direct import
+ * 2. Legacy NodeRegistry object for backward compatibility
+ * 
+ * Note: Nodes now self-register to Odoo registry in their own files.
+ * The registry is the source of truth; this file is for compatibility.
  */
 
+// Re-export node classes (they self-register when imported)
+export { HttpRequestNode } from './http_request';
+export { LoopNode, IfNode, CodeNode, NoOpNode } from './flow_nodes';
+export { DataValidationNode, DataMappingNode } from './data_nodes';
+
+// Import for building legacy object
 import { HttpRequestNode } from './http_request';
 import { LoopNode, IfNode, CodeNode, NoOpNode } from './flow_nodes';
 import { DataValidationNode, DataMappingNode } from './data_nodes';
 
-// All available node classes
+/**
+ * @deprecated Use workflowNode service or import directly from node files
+ * Legacy NodeRegistry for backward compatibility during migration
+ */
+export const NodeRegistry = {
+    [HttpRequestNode.nodeType]: HttpRequestNode,
+    [LoopNode.nodeType]: LoopNode,
+    [IfNode.nodeType]: IfNode,
+    [CodeNode.nodeType]: CodeNode,
+    [NoOpNode.nodeType]: NoOpNode,
+    [DataValidationNode.nodeType]: DataValidationNode,
+    [DataMappingNode.nodeType]: DataMappingNode,
+};
+
+// Convenience array of all node classes
 export const NodeClasses = [
     HttpRequestNode,
-    DataValidationNode,
-    DataMappingNode,
     LoopNode,
     IfNode,
     CodeNode,
     NoOpNode,
+    DataValidationNode,
+    DataMappingNode,
 ];
-
-// Registry: type -> class
-export const NodeRegistry = {};
-NodeClasses.forEach(NodeClass => {
-    NodeRegistry[NodeClass.nodeType] = NodeClass;
-});
-
-// Grouped by category for palette
-export const NodesByCategory = {};
-NodeClasses.forEach(NodeClass => {
-    const cat = NodeClass.category || 'general';
-    if (!NodesByCategory[cat]) {
-        NodesByCategory[cat] = [];
-    }
-    NodesByCategory[cat].push(NodeClass);
-});
-
-// Export individual nodes for direct import
-export {
-    HttpRequestNode,
-    DataValidationNode,
-    DataMappingNode,
-    LoopNode,
-    IfNode,
-    CodeNode,
-    NoOpNode,
-};

@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <templates id="template" xml:space="preserve">
 	<t t-name="workflow_pilot.editor_canvas">
-		<div class="workflow-editor-canvas" t-ref="root" t-on-dragover="onDragOver" t-on-drop="onDrop" t-on-click="onCanvasClick" t-on-mousedown="onCanvasMouseDown" t-on-wheel.prevent="onWheel" t-on-contextmenu="onCanvasContextMenu">
+		<div class="workflow-editor-canvas" t-ref="root" t-att-style="canvasBackgroundStyle" t-on-dragover="onDragOver" t-on-drop="onDrop" t-on-click="onCanvasClick" t-on-mousedown="onCanvasMouseDown" t-on-wheel="onWheel" t-on-contextmenu="onCanvasContextMenu">
 			<!-- Controls Bar (Top-Left) -->
 			<div class="workflow-editor-canvas__controls">
 				<button class="canvas-btn" t-on-click="tidyUp" title="Tidy Up">✨</button>
+				<button class="canvas-btn add-node-btn" t-on-click="(ev) => this.onAddNodeClick(ev)" title="Add Node">+ Node</button>
 				<button class="canvas-btn" t-on-click="fitToView" title="Fit to View">⊡</button>
 				<div class="controls-divider"/>
 				<button class="canvas-btn" t-on-click="zoomOut" title="Zoom Out">−</button>
 				<span class="zoom-label">
 					<t t-esc="zoomPercentage"/>%
+				
 				
 				</span>
 				<button class="canvas-btn" t-on-click="zoomIn" title="Zoom In">+</button>
@@ -26,7 +28,7 @@
 					</defs>
 					<!-- Render connection paths -->
 					<t t-foreach="renderedConnections" t-as="conn" t-key="conn.id">
-						<g class="workflow-connection-group" t-att-class="{ 'selected': state.selectedConnectionIds.includes(conn.id), 'vertical-stack': conn.isVerticalStack }" t-on-click.stop="() => this.onConnectionSelect(conn.id)" t-on-mouseenter="() => this.onConnectionMouseEnter(conn.id, this.getConnectionMidpoint(conn))" t-on-mouseleave="onConnectionMouseLeave">
+						<g class="workflow-connection-group" t-att-class="{ 'selected': state.selectedConnectionIds.includes(conn.id), 'vertical-stack': conn.isVerticalStack }" t-on-click.stop="() => this.onConnectionSelect(conn.id)" t-on-mouseenter="(ev) => this.handleConnectionEnter(ev, conn)" t-on-mouseleave="onConnectionMouseLeave">
 							<t t-foreach="conn.paths" t-as="pathD" t-key="pathD_index">
 								<!-- Thicker invisible path for easier clicking -->
 								<path t-att-d="pathD" class="workflow-connection-hitarea" stroke="transparent" stroke-width="12" fill="none" />
@@ -45,14 +47,16 @@
 				<!-- Render WorkflowNode components with zoom and snapped socket props -->
 				<!-- Render WorkflowNode components (Viewport Culling: only visible nodes) -->
 				<t t-foreach="visibleNodes" t-as="node" t-key="node.id">
-					<WorkflowNode node="node" zoom="state.viewport.zoom" selected="isNodeSelected(node)" snappedSocketKey="state.snappedSocket and state.snappedSocket.nodeId === node.id ? state.snappedSocket.socketKey : null" dimensionConfig="dimensions" onMove.bind="onNodeMove" onSelect.bind="onNodeSelect" onSocketMouseDown="onSocketMouseDown" onSocketMouseUp="onSocketMouseUp"/>
+					<WorkflowNode node="node" zoom="state.viewport.zoom" selected="isNodeSelected(node)" snappedSocketKey="state.snappedSocket and state.snappedSocket.nodeId === node.id ? state.snappedSocket.socketKey : null" connectedOutputsSet="connectedOutputsSet" dimensionConfig="dimensions" onMove.bind="onNodeMove" onSelect.bind="onNodeSelect" onSocketMouseDown="onSocketMouseDown" onSocketMouseUp="onSocketMouseUp" onSocketQuickAdd="onSocketQuickAdd"/>
 				</t>
 				<!-- Selection box -->
-				<div t-if="state.isSelecting and selectionBoxStyle" class="workflow-editor-canvas__selection-box" t-att-style="selectionBoxStyle"/>
+				<div t-if="state.isSelecting and selectionBoxStyle" class="workflow-editor-canvas__selection-box" t-att-style="selectionBoxStyle"/></div>
+			<!-- Fixed-size overlays (independent of zoom/pan) -->
+			<div class="workflow-editor-canvas__overlays">
 				<!-- Connection Toolbar (on hover) -->
 				<ConnectionToolbar t-if="state.hoveredConnection.id" position="state.hoveredConnection.midpoint" connectionId="state.hoveredConnection.id" onAddNode.bind="onConnectionAddNode" onDelete.bind="removeConnectionById" onHoverChange.bind="onToolbarHoverChange"/>
 				<!-- Node Menu (context menu) -->
-				<NodeMenu t-if="state.nodeMenu.visible" position="{ x: state.nodeMenu.x, y: state.nodeMenu.y }" connectionContext="state.nodeMenu.connectionContext" onSelect.bind="onNodeMenuSelect" onClose.bind="onNodeMenuClose"/>
+				<NodeMenu t-if="state.nodeMenu.visible" position="{ x: state.nodeMenu.x, y: state.nodeMenu.y }" variant="state.nodeMenu.variant" connectionContext="state.nodeMenu.connectionContext" onSelect.bind="onNodeMenuSelect" onClose.bind="onNodeMenuClose"/>
 			</div>
 		</div>
 	</t>

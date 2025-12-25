@@ -115,6 +115,13 @@
   font-family: "Outfit", "Inter", system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, sans-serif;
   color: #e0e0e0;
+
+  /* Subtle light dots for dark mode (moved to parent for infinite coverage) */
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.12) 1px,
+    transparent 0
+  );
+  /* background-size and background-position are updated dynamically in JS */
 }
 
 .workflow-editor-canvas__content {
@@ -124,13 +131,6 @@
   width: 100%;
   height: 100%;
   will-change: transform;
-
-  /* Subtle light dots for dark mode */
-  background-image: radial-gradient(
-    rgba(255, 255, 255, 0.12) 1px,
-    transparent 0
-  );
-  background-size: 20px 20px;
 }
 
 .workflow-editor-canvas__hint {
@@ -160,7 +160,7 @@
 .workflow-connection {
   stroke: #555555; /* Default Dark Mode Connection */
   color: #555555; /* For SVG marker currentColor */
-  transition: stroke 0.1s ease, stroke-width 0.1s ease;
+  /* transition: stroke 0.1s ease, stroke-width 0.1s ease; DISABLED */
   pointer-events: visibleStroke;
 }
 
@@ -218,8 +218,8 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   z-index: 10;
   cursor: default;
-  transition: box-shadow 0.2s ease, transform 0.1s ease, border-color 0.2s;
-  will-change: transform, left, top;
+  /* transition: box-shadow 0.2s ease, transform 0.1s ease, border-color 0.2s; DISABLED */
+  will-change: left, top;
 }
 
 /* Node Width Utility Classes */
@@ -246,7 +246,7 @@
 .workflow-node.dragging {
   z-index: 100 !important;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
-  transform: scale(1.01);
+  /* transform: scale(1.01); DISABLED */
   cursor: grabbing;
 }
 
@@ -353,7 +353,7 @@
   padding: 4px 1px;
   border-radius: 4px;
   cursor: crosshair;
-  transition: background 0.15s ease, box-shadow 0.15s ease;
+  /* transition: background 0.15s ease, box-shadow 0.15s ease; DISABLED */
   position: relative;
 }
 
@@ -380,12 +380,12 @@
   background: #2a2d33;
   border: 2px solid #555;
   cursor: crosshair;
-  transition: all 0.15s ease;
+  /* transition: all 0.15s ease; DISABLED */
   flex-shrink: 0;
 }
 
 .workflow-node__socket-wrapper:hover .workflow-node__socket-point {
-  transform: scale(1.2);
+  /* transform: scale(1.2); DISABLED */
   background: #929292;
   border-color: #8f8f8f;
 }
@@ -395,7 +395,7 @@
 }
 
 .workflow-node__socket-point.is-snapped {
-  transform: scale(1.5);
+  /* transform: scale(1.5); DISABLED */
   background: #929292;
   border-color: #8f8f8f;
   box-shadow: 0 0 10px rgba(146, 146, 146, 0.6);
@@ -406,6 +406,45 @@
   color: #94a3b8;
   font-weight: 500;
   white-space: nowrap;
+}
+
+/* Socket Quick-Add Connector (n8n style: "- - - +") */
+.socket-quick-add-connector {
+  position: absolute;
+  right: -55px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  z-index: 10;
+}
+
+.socket-quick-add-line {
+  width: 20px;
+  height: 0;
+  border-top: 2px dashed #555;
+}
+
+.socket-quick-add-btn {
+  width: 16px;
+  height: 16px;
+  border-radius: 10%;
+  border: 1px solid #555;
+  background: #1e2025;
+  color: #71717a;
+  font-size: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.socket-quick-add-btn:hover {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
 }
 
 /* 5. Canvas Controls */
@@ -426,6 +465,19 @@
   user-select: none;
 }
 
+.add-node-btn {
+  width: auto !important;
+  padding: 0 10px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600;
+  background: #3b82f6 !important;
+  color: white !important;
+}
+
+.add-node-btn:hover {
+  background: #2563eb !important;
+}
+
 .canvas-btn {
   width: 30px;
   height: 30px;
@@ -438,7 +490,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.1s ease;
+  /* transition: all 0.1s ease; DISABLED */
 }
 
 .canvas-btn:hover {
@@ -506,9 +558,34 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  animation: nodeMenuFadeIn 0.15s ease-out;
+  /* animation: nodeMenuFadeIn 0.15s ease-out; DISABLED */
 }
 
+.node-menu--large {
+  width: 500px;
+  max-height: 600px;
+  animation: none; /* Handled by MotionHelpers.animateDropdownIn */
+}
+
+.node-menu--large .node-menu__item {
+  padding: 16px;
+}
+
+.node-menu--large .node-menu__item-icon {
+  width: 44px;
+  height: 44px;
+  font-size: 1.5rem;
+}
+
+.node-menu--large .node-menu__item-title {
+  font-size: 1.1rem;
+}
+
+.node-menu--large .node-menu__item-description {
+  font-size: 0.9rem;
+}
+
+/* @keyframes nodeMenuFadeIn DISABLED
 @keyframes nodeMenuFadeIn {
   from {
     opacity: 0;
@@ -519,6 +596,7 @@
     transform: translateY(0);
   }
 }
+*/
 
 /* Search Bar */
 .node-menu__search {
@@ -536,7 +614,7 @@
   font-size: 0.9rem;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  /* transition: border-color 0.15s ease, box-shadow 0.15s ease; DISABLED */
 }
 
 .node-menu__search-input:focus {
@@ -576,7 +654,7 @@
   gap: 12px;
   padding: 10px 12px;
   cursor: pointer;
-  transition: background 0.1s ease;
+  /* transition: background 0.1s ease; DISABLED */
 }
 
 .node-menu__item:hover {
@@ -636,9 +714,10 @@
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   transform: translate(-50%, -50%);
-  animation: toolbarFadeIn 0.1s ease-out;
+  /* animation: toolbarFadeIn 0.1s ease-out; DISABLED */
 }
 
+/* @keyframes toolbarFadeIn DISABLED
 @keyframes toolbarFadeIn {
   from {
     opacity: 0;
@@ -649,6 +728,7 @@
     transform: translate(-50%, -50%) scale(1);
   }
 }
+*/
 
 .connection-toolbar__btn {
   width: 28px;
@@ -662,7 +742,7 @@
   color: #a1a1aa;
   font-size: 1rem;
   cursor: pointer;
-  transition: all 0.1s ease;
+  /* transition: all 0.1s ease; DISABLED */
 }
 
 .connection-toolbar__btn:hover {

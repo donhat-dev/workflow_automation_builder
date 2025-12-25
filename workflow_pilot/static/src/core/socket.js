@@ -1,6 +1,11 @@
 /** @odoo-module **/
 
 /**
+ * @core - Pure JavaScript class, no Odoo dependencies.
+ *         Can be used outside Odoo environment.
+ */
+
+/**
  * Socket - Defines typed connection points for nodes
  * Inspired by Rete.js ClassicPreset.Socket
  * 

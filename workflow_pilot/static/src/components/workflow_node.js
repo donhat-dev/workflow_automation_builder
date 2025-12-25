@@ -18,11 +18,13 @@ export class WorkflowNode extends Component {
         node: Object,
         zoom: { type: Number, optional: true },
         snappedSocketKey: { type: [String, { value: null }], optional: true },
+        connectedOutputsSet: { type: Object, optional: true },  // Set of "nodeId:socketKey" for connected outputs
         dimensionConfig: { type: Object },  // Dimension configuration from EditorCanvas
         onMove: { type: Function },
         onSelect: { type: Function },
         onSocketMouseDown: { type: Function, optional: true },
         onSocketMouseUp: { type: Function, optional: true },
+        onSocketQuickAdd: { type: Function, optional: true },  // Quick-add button on unconnected sockets
         selected: { type: Boolean, optional: true },
     };
 
@@ -35,10 +37,10 @@ export class WorkflowNode extends Component {
 
         this.dragState = { startX: 0, startY: 0, initialX: 0, initialY: 0 };
 
-        // Motion.dev entrance animation
-        onMounted(() => {
-            MotionHelpers.animateNodeIn(this.rootRef.el);
-        });
+        // Motion.dev entrance animation - DISABLED
+        // onMounted(() => {
+        //     MotionHelpers.animateNodeIn(this.rootRef.el);
+        // });
     }
 
     /**
@@ -82,9 +84,10 @@ export class WorkflowNode extends Component {
             const dy = (ev.clientY - this.dragState.startY) / zoom;
 
             // Grid Snapping (n8n-style)
+            // Note: No artificial bounds - canvas is infinite, nodes can be anywhere
             const GRID_SIZE = 20;
-            const targetX = Math.max(0, this.dragState.initialX + dx);
-            const targetY = Math.max(0, this.dragState.initialY + dy);
+            const targetX = this.dragState.initialX + dx;
+            const targetY = this.dragState.initialY + dy;
             const snappedX = Math.round(targetX / GRID_SIZE) * GRID_SIZE;
             const snappedY = Math.round(targetY / GRID_SIZE) * GRID_SIZE;
 
@@ -152,6 +155,18 @@ export class WorkflowNode extends Component {
             });
         }
         return rows;
+    }
+
+    /**
+     * Check if an output socket is connected
+     * Uses O(1) Set lookup from parent
+     * @param {string} socketKey 
+     * @returns {boolean}
+     */
+    isOutputConnected(socketKey) {
+        const set = this.props.connectedOutputsSet;
+        if (!set) return false;
+        return set.has(`${this.props.node.id}:${socketKey}`);
     }
 
     /**

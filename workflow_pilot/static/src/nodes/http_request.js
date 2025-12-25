@@ -1,5 +1,6 @@
 /** @odoo-module **/
 
+import { registry } from "@web/core/registry";
 import { BaseNode, DataSocket, ErrorSocket } from '../core/node';
 import { TextInputControl, SelectControl, KeyValueControl } from '../core/control';
 
@@ -15,6 +16,7 @@ export class HttpRequestNode extends BaseNode {
     static label = 'HTTP Request';
     static icon = 'fa-globe';
     static category = 'integration';
+    static description = 'Make HTTP API calls to external services';
 
     constructor() {
         super();
@@ -57,3 +59,6 @@ export class HttpRequestNode extends BaseNode {
         }));
     }
 }
+
+// Self-register to Odoo registry (like Odoo actions/fields pattern)
+registry.category("workflow_node_types").add("http", HttpRequestNode);

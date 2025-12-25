@@ -1,5 +1,6 @@
 /** @odoo-module **/
 
+import { registry } from "@web/core/registry";
 import { BaseNode, DataSocket } from '../core/node';
 
 /**
@@ -16,6 +17,7 @@ export class LoopNode extends BaseNode {
     static label = 'Loop Over Items';
     static icon = 'fa-repeat';
     static category = 'flow';
+    static description = 'Iterate over array items one at a time';
 
     constructor() {
         super();
@@ -42,6 +44,7 @@ export class IfNode extends BaseNode {
     static label = 'If';
     static icon = 'fa-code-branch';
     static category = 'flow';
+    static description = 'Route data based on condition';
 
     constructor() {
         super();
@@ -66,6 +69,7 @@ export class CodeNode extends BaseNode {
     static label = 'Code';
     static icon = 'fa-code';
     static category = 'transform';
+    static description = 'Execute custom code';
 
     constructor() {
         super();
@@ -86,7 +90,8 @@ export class NoOpNode extends BaseNode {
     static nodeType = 'noop';
     static label = 'Replace Me';
     static icon = 'fa-circle-o';
-    static category = 'general';
+    static category = 'flow';
+    static description = 'Placeholder node';
 
     constructor() {
         super();
@@ -95,3 +100,9 @@ export class NoOpNode extends BaseNode {
         this.addOutput('result', DataSocket, 'Result');
     }
 }
+
+// Self-register all flow nodes to Odoo registry
+registry.category("workflow_node_types").add("loop", LoopNode);
+registry.category("workflow_node_types").add("if", IfNode);
+registry.category("workflow_node_types").add("code", CodeNode);
+registry.category("workflow_node_types").add("noop", NoOpNode);

@@ -21,6 +21,7 @@ export class WorkflowSocket extends Component {
         // Callbacks for connection interactions
         onMouseDown: { type: Function, optional: true },
         onMouseUp: { type: Function, optional: true },
+        onQuickAdd: { type: Function, optional: true },  // Quick-add button callback
     };
 
     /**
@@ -51,4 +52,18 @@ export class WorkflowSocket extends Component {
             event: ev
         });
     }
+
+    /**
+     * Handle quick-add button click
+     * @param {MouseEvent} ev 
+     */
+    onQuickAddClick(ev) {
+        ev.stopPropagation();
+        this.props.onQuickAdd?.({
+            nodeId: this.props.nodeId,
+            socketKey: this.props.name,
+            event: ev,
+        });
+    }
 }
+

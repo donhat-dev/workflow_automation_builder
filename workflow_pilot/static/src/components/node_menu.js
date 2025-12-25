@@ -1,25 +1,34 @@
 /** @odoo-module **/
-import { Component, xml, useState, useRef, onMounted, onWillUnmount } from "@odoo/owl";
 
 /**
  * NodeMenu Component
  * 
  * A floating context menu for adding nodes to the workflow canvas.
- * Styled like n8n's node selector with search and categories.
+ * Uses workflowNode service for dynamic node categories.
  * 
  * Features:
  * - Search bar with auto-focus
- * - Categorized node list
+ * - Dynamic categorized node list from registry
  * - Keyboard navigation (Escape to close)
  * - Click outside to close
  * - Absolute positioning at spawn location
+ * 
+ * @odoo-dependency - Uses useService for workflowNode service
  */
+
+import { Component, xml, useState, useRef, onMounted, onWillUnmount } from "@odoo/owl";
+// @odoo-dependency - useService hook
+import { useService } from "@web/core/utils/hooks";
+import { MotionHelpers } from "../utils/motion_helpers";
+
 export class NodeMenu extends Component {
     static template = xml`
         <div class="node-menu" 
              t-att-style="menuStyle"
+             t-att-class="{ 'node-menu--large': props.variant === 'large' }"
              t-ref="menuRoot"
-             t-on-keydown="onKeyDown">
+             t-on-keydown="onKeyDown"
+             t-on-wheel.stop="">
             <!-- Search Bar -->
             <div class="node-menu__search">
                 <input type="text" 
@@ -32,21 +41,26 @@ export class NodeMenu extends Component {
             
             <!-- Node Categories -->
             <div class="node-menu__content">
-                <t t-foreach="filteredCategories" t-as="category" t-key="category.name">
+                <t t-foreach="filteredCategories" t-as="category" t-key="category.key">
                     <div class="node-menu__category">
                         <div class="node-menu__category-title">
+                            <i t-if="category.icon and category.icon.startsWith('fa-')" 
+                               t-attf-class="fa {{category.icon}} node-menu__category-icon"/>
+                            <span t-else="" class="node-menu__category-icon" t-esc="category.icon"/>
                             <t t-esc="category.name"/>
                         </div>
-                        <t t-foreach="category.items" t-as="item" t-key="item.name">
+                        <t t-foreach="category.items" t-as="item" t-key="item.key">
                             <div class="node-menu__item" 
-                                 t-att-data-node-type="item.name"
+                                 t-att-data-node-type="item.key"
                                  t-on-click="onItemClick">
                                 <div class="node-menu__item-icon">
-                                    <t t-esc="item.icon"/>
+                                    <i t-if="item.icon and item.icon.startsWith('fa-')" 
+                                       t-attf-class="fa {{item.icon}}"/>
+                                    <t t-else="" t-esc="item.icon or '📦'"/>
                                 </div>
                                 <div class="node-menu__item-info">
                                     <div class="node-menu__item-title">
-                                        <t t-esc="item.title"/>
+                                        <t t-esc="item.name"/>
                                     </div>
                                     <div class="node-menu__item-description" t-if="item.description">
                                         <t t-esc="item.description"/>
@@ -66,9 +80,10 @@ export class NodeMenu extends Component {
     `;
 
     static props = {
-        position: { type: Object },  // { x, y } - canvas coordinates
+        position: { type: Object },  // { x, y } - screen coordinates
         onSelect: { type: Function }, // (nodeType) => void
         onClose: { type: Function },  // () => void
+        variant: { type: String, optional: true }, // 'default' or 'large'
         // Optional: for inserting node into a connection (can be null)
         connectionContext: { type: [Object, { value: null }], optional: true },
     };
@@ -76,6 +91,9 @@ export class NodeMenu extends Component {
     setup() {
         this.menuRef = useRef("menuRoot");
         this.searchInputRef = useRef("searchInput");
+
+        // @odoo-dependency - Access workflowNode service
+        this.nodeService = useService("workflowNode");
 
         this.state = useState({
             searchQuery: "",
@@ -85,6 +103,11 @@ export class NodeMenu extends Component {
         onMounted(() => {
             this.searchInputRef.el?.focus();
             document.addEventListener("mousedown", this._onClickOutside);
+
+            // Animation DISABLED
+            // if (this.props.variant === 'large' && this.menuRef.el) {
+            //     MotionHelpers.animateDropdownIn(this.menuRef.el);
+            // }
         });
 
         onWillUnmount(() => {
@@ -95,32 +118,25 @@ export class NodeMenu extends Component {
     }
 
     /**
-     * Node categories and items
+     * Get categories with nodes from service
+     * Replaces hardcoded categories getter
      */
     get categories() {
-        return [
-            {
-                name: "Actions",
-                items: [
-                    { name: "http", title: "HTTP Request", icon: "🌐", description: "Create and send an HTTP request" },
-                    { name: "code", title: "Code", icon: "🐍", description: "Run custom Python/JS code" },
-                ],
-            },
-            {
-                name: "Flow Control",
-                items: [
-                    { name: "if", title: "If", icon: "⬖", description: "Conditional branching" },
-                    { name: "loop", title: "Loop", icon: "🔄", description: "Loop over items" },
-                ],
-            },
-            {
-                name: "Data",
-                items: [
-                    { name: "mapping", title: "Data Mapping", icon: "⇄", description: "Transform and map data" },
-                    { name: "validation", title: "Validation", icon: "✓", description: "Validate data format" },
-                ],
-            },
-        ];
+        // Get grouped nodes from service
+        const grouped = this.nodeService.searchNodes("");
+
+        // Transform to menu format
+        return grouped.map(group => ({
+            key: group.key,
+            name: group.name,
+            icon: group.icon,
+            items: group.nodes.map(node => ({
+                key: node.key,
+                name: node.name,
+                icon: node.icon,
+                description: node.description,
+            })),
+        }));
     }
 
     /**
@@ -128,24 +144,36 @@ export class NodeMenu extends Component {
      */
     get filteredCategories() {
         const query = this.state.searchQuery.toLowerCase().trim();
-        if (!query) return this.categories;
 
-        return this.categories
-            .map(cat => ({
-                ...cat,
-                items: cat.items.filter(item =>
-                    item.title.toLowerCase().includes(query) ||
-                    item.description?.toLowerCase().includes(query)
-                ),
-            }))
-            .filter(cat => cat.items.length > 0);
+        if (!query) {
+            return this.categories;
+        }
+
+        // Use service search for fuzzy matching
+        const searchResults = this.nodeService.searchNodes(query);
+
+        return searchResults.map(group => ({
+            key: group.key,
+            name: group.name,
+            icon: group.icon,
+            items: group.nodes.map(node => ({
+                key: node.key,
+                name: node.name,
+                icon: node.icon,
+                description: node.description,
+            })),
+        })).filter(cat => cat.items.length > 0);
     }
 
     /**
      * Menu positioning style
      */
     get menuStyle() {
-        const { x, y } = this.props.position || { x: 100, y: 100 };
+        const { x, y } = this.props.position || { x: 0, y: 0 };
+        if (this.props.variant === 'large') {
+            // Dropdown style: align left with button, no centering
+            return `left: ${x}px; top: ${y}px;`;
+        }
         return `left: ${x}px; top: ${y}px;`;
     }
 
@@ -161,6 +189,9 @@ export class NodeMenu extends Component {
      * Handle node selection
      */
     onSelectNode(nodeType) {
+        // Track usage for "recent" feature
+        this.nodeService.trackUsage(nodeType);
+
         this.props.onSelect(nodeType, this.props.connectionContext);
         this.props.onClose();
     }

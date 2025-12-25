@@ -249,12 +249,9 @@ export class WorkflowPilotDevApp extends Component {
      * Run performance benchmark
      */
     runBenchmark = async () => {
-        if (!confirm("This will clear current workflow and generate 500 nodes. Continue?")) return;
-
         await runStressTest(this.adapter, 500);
         // Reactive store updates automatically
         console.log("Benchmark complete. Check console for metrics.");
-        alert("Benchmark complete! Check console for timing details.\n\nTry zooming and panning now to test fps.");
     };
 
     // =========================================

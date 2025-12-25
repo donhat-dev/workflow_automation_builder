@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-import { Component, useRef, useState, useExternalListener, reactive } from "@odoo/owl";
+import { Component, useRef, useState, useExternalListener, reactive, onMounted } from "@odoo/owl";
 import { WorkflowNode } from "./workflow_node";
 import { NodeMenu } from "./node_menu";
 import { ConnectionToolbar } from "./connection_toolbar";
@@ -71,6 +71,17 @@ export class EditorCanvas extends Component {
                 id: null,
                 midpoint: { x: 0, y: 0 },
             },
+            // Viewport tracking for culling
+            viewRect: { x: 0, y: 0, w: 0, h: 0 },
+        });
+
+        // Resize observer to update viewport on window resize
+        this._resizeObserver = new ResizeObserver(() => this.updateViewRect());
+        onMounted(() => {
+            if (this.rootRef.el) {
+                this._resizeObserver.observe(this.rootRef.el);
+                this.updateViewRect();
+            }
         });
 
         // Pan/drag tracking (non-reactive)
@@ -142,6 +153,60 @@ export class EditorCanvas extends Component {
     }
 
     /**
+     * Update visible viewport rectangle (canvas coordinates)
+     * Called on pan, zoom, and resize
+     */
+    updateViewRect() {
+        if (!this.rootRef.el) return;
+        const rect = this.rootRef.el.getBoundingClientRect();
+        const { zoom, panX, panY } = this.state.viewport;
+
+        // Add 300px buffer for smooth scrolling/panning
+        const BUFFER = 300;
+
+        // Calculate visible area in canvas space
+        this.state.viewRect = {
+            x: -panX / zoom - BUFFER,
+            y: -panY / zoom - BUFFER,
+            w: rect.width / zoom + (BUFFER * 2),
+            h: rect.height / zoom + (BUFFER * 2),
+        };
+    }
+
+    /**
+     * Get nodes that are currently visible in the viewport
+     * @returns {Array}
+     */
+    get visibleNodes() {
+        const { x, y, w, h } = this.state.viewRect;
+        // Conservative node size estimate for intersection check
+        const MAX_NODE_WIDTH = 500;
+        const MAX_NODE_HEIGHT = 500;
+
+        return this.nodes.filter(node => {
+            // Simple AABB intersection test
+            return (
+                node.x < x + w &&
+                node.x + MAX_NODE_WIDTH > x &&
+                node.y < y + h &&
+                node.y + MAX_NODE_HEIGHT > y
+            );
+        });
+    }
+
+    /**
+     * Get connections associated with visible nodes
+     * @returns {Array}
+     */
+    get visibleConnections() {
+        // Only render connection if source OR target is visible
+        const visibleNodeIds = new Set(this.visibleNodes.map(n => n.id));
+        return this.connections.filter(c =>
+            visibleNodeIds.has(c.source) || visibleNodeIds.has(c.target)
+        );
+    }
+
+    /**
      * Handle wheel event for zoom
      * @param {WheelEvent} ev
      */
@@ -165,6 +230,8 @@ export class EditorCanvas extends Component {
             this.state.viewport.panX = mouseX - (mouseX - this.state.viewport.panX) * factor;
             this.state.viewport.panY = mouseY - (mouseY - this.state.viewport.panY) * factor;
             this.state.viewport.zoom = newZoom;
+
+            this.updateViewRect();
         });
     }
 
@@ -453,7 +520,7 @@ export class EditorCanvas extends Component {
         // Use connection constants from dimensions module
         const EDGE_DETECTION = CONNECTION;
 
-        return this.connections.map(conn => {
+        return this.visibleConnections.map(conn => {
             const sourceNode = this.nodes.find(n => n.id === conn.source);
             const targetNode = this.nodes.find(n => n.id === conn.target);
 
@@ -611,6 +678,7 @@ export class EditorCanvas extends Component {
             if (this.state.isPanning && this._panStart) {
                 this.state.viewport.panX = this._panInitial.x + (ev.clientX - this._panStart.x);
                 this.state.viewport.panY = this._panInitial.y + (ev.clientY - this._panStart.y);
+                this.updateViewRect();
                 return;
             }
 

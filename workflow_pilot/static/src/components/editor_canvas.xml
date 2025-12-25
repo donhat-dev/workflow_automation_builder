@@ -27,7 +27,7 @@
 					<!-- Render connection paths -->
 					<t t-foreach="renderedConnections" t-as="conn" t-key="conn.id">
 						<g class="workflow-connection-group" t-att-class="{ 'selected': state.selectedConnectionIds.includes(conn.id), 'vertical-stack': conn.isVerticalStack }" t-on-click.stop="() => this.onConnectionSelect(conn.id)" t-on-mouseenter="() => this.onConnectionMouseEnter(conn.id, this.getConnectionMidpoint(conn))" t-on-mouseleave="onConnectionMouseLeave">
- 							<t t-foreach="conn.paths" t-as="pathD" t-key="pathD_index">
+							<t t-foreach="conn.paths" t-as="pathD" t-key="pathD_index">
 								<!-- Thicker invisible path for easier clicking -->
 								<path t-att-d="pathD" class="workflow-connection-hitarea" stroke="transparent" stroke-width="12" fill="none" />
 								<!-- Visible path (arrow only on last segment) -->
@@ -43,7 +43,8 @@
 					Drop nodes here (or click in the palette)
 				</div>
 				<!-- Render WorkflowNode components with zoom and snapped socket props -->
-				<t t-foreach="nodes" t-as="node" t-key="node.id">
+				<!-- Render WorkflowNode components (Viewport Culling: only visible nodes) -->
+				<t t-foreach="visibleNodes" t-as="node" t-key="node.id">
 					<WorkflowNode node="node" zoom="state.viewport.zoom" selected="isNodeSelected(node)" snappedSocketKey="state.snappedSocket and state.snappedSocket.nodeId === node.id ? state.snappedSocket.socketKey : null" dimensionConfig="dimensions" onMove.bind="onNodeMove" onSelect.bind="onNodeSelect" onSocketMouseDown="onSocketMouseDown" onSocketMouseUp="onSocketMouseUp"/>
 				</t>
 				<!-- Selection box -->

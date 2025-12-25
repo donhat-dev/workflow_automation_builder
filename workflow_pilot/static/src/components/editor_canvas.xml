@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates id="template" xml:space="preserve">
+	<t t-name="workflow_pilot.editor_canvas">
+		<div class="workflow-editor-canvas" t-ref="root" t-on-dragover="onDragOver" t-on-drop="onDrop" t-on-click="onCanvasClick" t-on-mousedown="onCanvasMouseDown" t-on-wheel.prevent="onWheel" t-on-contextmenu="onCanvasContextMenu">
+			<!-- Controls Bar (Top-Left) -->
+			<div class="workflow-editor-canvas__controls">
+				<button class="canvas-btn" t-on-click="tidyUp" title="Tidy Up">✨</button>
+				<button class="canvas-btn" t-on-click="fitToView" title="Fit to View">⊡</button>
+				<div class="controls-divider"/>
+				<button class="canvas-btn" t-on-click="zoomOut" title="Zoom Out">−</button>
+				<span class="zoom-label">
+					<t t-esc="zoomPercentage"/>%
+				
+				</span>
+				<button class="canvas-btn" t-on-click="zoomIn" title="Zoom In">+</button>
+				<button class="canvas-btn" t-on-click="resetZoom" title="Reset View">⟲</button>
+			</div>
+			<!-- Transformable content wrapper -->
+			<div class="workflow-editor-canvas__content" t-att-style="viewportTransformStyle" t-ref="content">
+				<!-- SVG Connection Layer -->
+				<svg class="workflow-connections" t-ref="svgConnections">
+					<defs>
+						<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+							<polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
+						</marker>
+					</defs>
+					<!-- Render connection paths -->
+					<t t-foreach="renderedConnections" t-as="conn" t-key="conn.id">
+						<g class="workflow-connection-group" t-att-class="{ 'selected': state.selectedConnectionIds.includes(conn.id), 'vertical-stack': conn.isVerticalStack }" t-on-click.stop="() => this.onConnectionSelect(conn.id)" t-on-mouseenter="() => this.onConnectionMouseEnter(conn.id, this.getConnectionMidpoint(conn))" t-on-mouseleave="onConnectionMouseLeave">
+ 							<t t-foreach="conn.paths" t-as="pathD" t-key="pathD_index">
+								<!-- Thicker invisible path for easier clicking -->
+								<path t-att-d="pathD" class="workflow-connection-hitarea" stroke="transparent" stroke-width="12" fill="none" />
+								<!-- Visible path (arrow only on last segment) -->
+								<path t-att-d="pathD" t-att-data-connection-id="conn.id" t-att-class="'workflow-connection' + (conn.isBackEdge ? ' workflow-connection--back-edge' : '') + (conn.isVerticalStack ? ' workflow-connection--vertical-stack' : '')" stroke-width="2" fill="none" t-att-marker-end="pathD_last ? 'url(#arrowhead)' : undefined"/>
+							</t>
+						</g>
+					</t>
+					<!-- Temp connection line while drawing -->
+					<path t-if="state.isConnecting" t-att-d="tempConnectionPath" class="workflow-connection workflow-connection--temp" stroke-width="2" fill="none"/>
+				</svg>
+				<!-- Empty state hint -->
+				<div class="workflow-editor-canvas__hint" t-if="nodes.length === 0">
+					Drop nodes here (or click in the palette)
+				</div>
+				<!-- Render WorkflowNode components with zoom and snapped socket props -->
+				<t t-foreach="nodes" t-as="node" t-key="node.id">
+					<WorkflowNode node="node" zoom="state.viewport.zoom" selected="isNodeSelected(node)" snappedSocketKey="state.snappedSocket and state.snappedSocket.nodeId === node.id ? state.snappedSocket.socketKey : null" dimensionConfig="dimensions" onMove.bind="onNodeMove" onSelect.bind="onNodeSelect" onSocketMouseDown="onSocketMouseDown" onSocketMouseUp="onSocketMouseUp"/>
+				</t>
+				<!-- Selection box -->
+				<div t-if="state.isSelecting and selectionBoxStyle" class="workflow-editor-canvas__selection-box" t-att-style="selectionBoxStyle"/>
+				<!-- Connection Toolbar (on hover) -->
+				<ConnectionToolbar t-if="state.hoveredConnection.id" position="state.hoveredConnection.midpoint" connectionId="state.hoveredConnection.id" onAddNode.bind="onConnectionAddNode" onDelete.bind="removeConnectionById" onHoverChange.bind="onToolbarHoverChange"/>
+				<!-- Node Menu (context menu) -->
+				<NodeMenu t-if="state.nodeMenu.visible" position="{ x: state.nodeMenu.x, y: state.nodeMenu.y }" connectionContext="state.nodeMenu.connectionContext" onSelect.bind="onNodeMenuSelect" onClose.bind="onNodeMenuClose"/>
+			</div>
+		</div>
+	</t>
+</templates>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates id="template" xml:space="preserve">
+	<t t-name="workflow_pilot.workflow_node">
+		<div class="workflow-node" t-ref="root" t-att-class="nodeTypeClass + (state.isDragging ? ' dragging' : '') + (props.selected ? ' selected' : '')" t-att-style="nodeStyle" t-att-data-node-id="props.node.id">
+			<!-- Header: Drag Handle -->
+			<div class="workflow-node__header" t-on-mousedown="onHeaderMouseDown">
+				<span class="workflow-node__icon">
+					<i t-att-class="'fa ' + nodeIcon"/>
+				</span>
+				<span class="workflow-node__title">
+					<t t-esc="props.node.title || props.node.type"/>
+				</span>
+			</div>
+			<!-- Body with Side-by-Side Sockets -->
+			<div class="workflow-node__body">
+				<div class="workflow-node__sockets">
+					<!-- Row-based socket layout: inputs and outputs paired by index -->
+					<t t-foreach="socketRows" t-as="row" t-key="row_index">
+						<div class="workflow-node__socket-row">
+							<!-- Input socket (left side) -->
+							<t t-if="row.input">
+								<WorkflowSocket type="'input'" name="row.input[0]" label="row.input[1].label" nodeId="props.node.id" isSnapped="props.snappedSocketKey === row.input[0]" onMouseUp="props.onSocketMouseUp" onMouseDown="props.onSocketMouseDown"/>
+							</t>
+							<div t-else="" class="workflow-node__socket-spacer"/>
+							<!-- Output socket (right side) -->
+							<t t-if="row.output">
+								<WorkflowSocket type="'output'" name="row.output[0]" label="row.output[1].label" nodeId="props.node.id" onMouseDown="props.onSocketMouseDown" onMouseUp="props.onSocketMouseUp"/>
+							</t>
+							<div t-else="" class="workflow-node__socket-spacer"/></div>
+					</t>
+				</div>
+				<!-- Fallback: show node ID if no sockets -->
+				<t t-if="!props.node.inputs and !props.node.outputs">
+					<div class="workflow-node__meta">
+						<t t-esc="props.node.id"/>
+					</div>
+				</t>
+			</div>
+		</div>
+	</t>
+</templates>

@@ -20,20 +20,18 @@ export class NodePaletteItem extends Component {
         title: { type: String, optional: true },
         icon: { type: String, optional: true },
         className: { type: String, optional: true },
-        onAddNode: { type: Function, optional: true },
+        onAddNode: { type: Function },
     };
 
     setup() {
-        // Make _t available in template scope as ctx._t
         this._t = _t;
     }
 
     onClick() {
-        this.props.onAddNode?.(this.props.name);
+        this.props.onAddNode(this.props.name);
     }
 
     onDragStart(ev) {
-        // Contract cho editor-canvas (sẽ implement ở component khác)
         ev.dataTransfer.effectAllowed = "copy";
         ev.dataTransfer.setData("application/x-workflow-node", this.props.name);
     }
@@ -57,19 +55,20 @@ class NodePalette extends Component {
     `;
 
     static components = { NodePaletteItem };
-    static props = { onAddNode: { type: Function, optional: true } };
+    static props = { onAddNode: { type: Function } };
 
     setup() {
-        // Make _t available in template scope as ctx._t
         this._t = _t;
     }
 
     get items() {
-        // Tạm hardcode; bước kế tiếp: lấy từ registry.category('workflow_builder.nodes')
         return [
             { name: "http", title: ("HTTP Request"), icon: "🌐", className: "node-palette__item--http" },
             { name: "validation", title: ("Data Validation"), icon: "✓", className: "node-palette__item--validation" },
             { name: "mapping", title: ("Data Mapping"), icon: "⇄", className: "node-palette__item--mapping" },
+            { name: "loop", title: ("Loop Over Items"), icon: "🔄", className: "node-palette__item--loop" },
+            { name: "if", title: ("If"), icon: "⬖", className: "node-palette__item--if" },
+            { name: "code", title: ("Code"), icon: "🐍", className: "node-palette__item--code" },
         ];
     }
 }

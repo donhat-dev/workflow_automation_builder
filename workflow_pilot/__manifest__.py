@@ -8,15 +8,16 @@
     'category': '',
     'depends': ['base', 'web'],
     'data': [
-        
+        'data/workflow_pilot_menu.xml',
     ],
     'assets': {
               'web.assets_backend': [
+                  'workflow_pilot/static/lib/dagre.js/dagre.min.js',
                   'workflow_pilot/static/src/**/*'
               ],
           },
     'application': True,
-    'installable': True,
+    'installable': True, 
     'auto_install': False,
     'license': 'LGPL-3',
 }

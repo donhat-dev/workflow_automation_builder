@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates id="template" xml:space="preserve">
+	<t t-name="workflow_pilot.workflow_socket">
+		<div class="workflow-node__socket" t-att-class="'workflow-node__socket--' + props.type">
+			<!-- Wrapper for larger hit area (includes point + label) -->
+			<div class="workflow-node__socket-wrapper" t-att-data-socket-key="props.name" t-att-data-socket-type="props.type" t-on-mousedown.stop.prevent="onPointMouseDown" t-on-mouseup="onPointMouseUp">
+				<!-- Socket point -->
+				<div class="workflow-node__socket-point" t-att-class="(props.isConnected ? 'is-connected' : '') + (props.isSnapped ? ' is-snapped' : '')"/>
+				<!-- Socket label -->
+				<span class="workflow-node__socket-label">
+					<t t-esc="props.label || props.name"/>
+				</span>
+			</div>
+		</div>
+	</t>
+</templates>
